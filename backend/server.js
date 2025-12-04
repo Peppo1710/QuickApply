@@ -69,7 +69,7 @@ app.get('/oauth/callback',
     async (req, res) => {
         try {
             const JWT_SECRET = process.env.JWT_SECRET ;
-            const FRONTEND_URL = process.envFRONTEND_URL;
+            const FRONTEND_URL = process.env.FRONTEND_URL;
             const oauthUser = req.user; // This is the OAuth info, not a DB user
             
             // Generate JWT token with OAuth info embedded
@@ -108,4 +108,3 @@ app.get('/api/status', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-.
