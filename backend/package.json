@@ -1,0 +1,36 @@
+{
+    "name": "linkedin-quick-apply-backend",
+    "version": "1.0.0",
+    "description": "Backend API for LinkedIn Quick Apply automation",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "keywords": [
+        "linkedin",
+        "automation",
+        "job-application"
+    ],
+    "author": "",
+    "license": "MIT",
+    "type": "commonjs",
+    "dependencies": {
+        "axios": "^1.13.2",
+        "bcryptjs": "^3.0.3",
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
+        "express": "^5.2.1",
+        "express-session": "^1.18.2",
+        "googleapis": "^144.0.0",
+        "jsonwebtoken": "^9.0.2",
+        "marked": "^17.0.1",
+        "mongoose": "^9.0.0",
+        "openai": "^4.0.0",
+        "passport": "^0.7.0",
+        "passport-google-oauth20": "^2.0.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.11"
+    }
+}

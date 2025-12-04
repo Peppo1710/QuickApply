@@ -1,0 +1,203 @@
+/* Shadow DOM Styles for Overlay - Mono, Boxy Design */
+/* Note: IBM Plex Mono font is loaded via link tag in content.js */
+
+.overlay-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace, system-ui;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.overlay-container.visible {
+    opacity: 1;
+}
+
+.editor-card {
+    background: #ffffff;
+    width: 90%;
+    max-width: 800px;
+    height: 80vh;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 2px solid #000000;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.overlay-container.visible .editor-card {
+    transform: scale(1);
+}
+
+.header {
+    padding: 20px 24px;
+    border-bottom: 2px solid #000000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+}
+
+.title {
+    color: #000000;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.close-btn {
+    background: transparent;
+    border: 2px solid #000000;
+    color: #000000;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 0;
+    transition: all 0.2s;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+}
+
+.close-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 20px;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+.email-editor {
+    flex: 1;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    color: #000000;
+    padding: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: none;
+}
+
+.email-editor:focus {
+    border-color: #000000;
+    box-shadow: none;
+}
+
+.prompt-bar {
+    display: flex;
+    gap: 12px;
+    background: #ffffff;
+    padding: 12px;
+    border-radius: 0;
+    border: 2px solid #000000;
+}
+
+.prompt-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #000000;
+    font-size: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    outline: none;
+}
+
+.prompt-input::placeholder {
+    color: #666666;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid #000000;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.btn-rewrite {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+}
+
+.btn-rewrite:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.footer {
+    padding: 20px 24px;
+    border-top: 2px solid #000000;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #ffffff;
+}
+
+.btn-cancel {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+}
+
+.btn-cancel:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.btn-send {
+    background: #000000;
+    color: #ffffff;
+    font-weight: 700;
+    border: 2px solid #000000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-send:hover {
+    background: #333333;
+    border-color: #333333;
+}
+
+/* Loading State */
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    backdrop-filter: blur(2px);
+    z-index: 10;
+    border: 2px solid #000000;
+}
