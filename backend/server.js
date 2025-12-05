@@ -1,16 +1,11 @@
 require('dotenv').config();
-// console.log(process.env.PORT );
-// console.log(process.env.GROQ_API_KEY);
-// console.log(process.env.CLIENT_ID);
-// console.log(process.env.CLIENT_SECRET);
-// console.log(process.env.MONGO_URI);
-// console.log(process.env.GROQ_API_KEY);
 
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+
 const profileRoutes = require('./routes/profileRoutes');
 const applyRoutes = require('./routes/applyRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -18,67 +13,71 @@ const authRoutes = require('./routes/authRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-// CORS configuration to allow both frontend and extension (LinkedIn) origins
-// Support multiple frontend URLs separated by comma
-const frontendUrls = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-    : ['http://localhost:5173'];
+/* -----------------------------------------------------
+   ✅ FIXED FRONTEND URL (NO TRAILING SLASH EVER)
+------------------------------------------------------*/
+const FRONTEND = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
 
+/* -----------------------------------------------------
+   ✅ CLEAN, SAFE CORS CONFIG
+------------------------------------------------------*/
 const allowedOrigins = [
-    ...frontendUrls,
-    'https://www.linkedin.com',
-    'https://linkedin.com'
+    FRONTEND,
+    "https://www.linkedin.com",
+    "https://linkedin.com"
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, Postman, or extension background scripts)
+        // Allow requests with no origin (Postman, extensions, mobile apps)
         if (!origin) return callback(null, true);
 
-        // Check if origin exactly matches or starts with allowed origins
-        const isAllowed = allowedOrigins.some(allowed => {
-            return origin === allowed || origin.startsWith(allowed);
-        });
+        console.log("🌐 Incoming Origin:", origin);
 
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            // For development, allow localhost origins
-            if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
-                callback(null, true);
-            } else {
-                console.warn('CORS blocked origin:', origin);
-                callback(new Error('Not allowed by CORS'));
-            }
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
         }
+
+        // Allow local dev
+        if (origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:")) {
+            return callback(null, true);
+        }
+
+        console.warn("❌ CORS Blocked Origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
 app.use(express.json());
 app.use(passport.initialize());
 
-// MongoDB Connection (single-user profile, no traditional login system)
+/* -----------------------------------------------------
+   ✅ MONGO CONNECTION
+------------------------------------------------------*/
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// Routes
-app.use('/api/auth', authRoutes);
+/* -----------------------------------------------------
+   ✅ ROUTES
+------------------------------------------------------*/
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/apply", applyRoutes);
 
-// OAuth callback route (mounted separately to match Google Console callback URL: /oauth/callback)
-app.get('/oauth/callback',
-    passport.authenticate('google', { session: false }),
+/* -----------------------------------------------------
+   ✅ GOOGLE OAUTH CALLBACK → FRONTEND
+------------------------------------------------------*/
+app.get("/oauth/callback",
+    passport.authenticate("google", { session: false }),
     async (req, res) => {
         try {
             const JWT_SECRET = process.env.JWT_SECRET;
-            const FRONTEND_URL = process.env.FRONTEND_URL;
-            const oauthUser = req.user; // This is the OAuth info, not a DB user
+            const oauthUser = req.user; // Google user info
 
-            // Generate JWT token with OAuth info embedded
-            // Profile will be created in DB when user saves the form
             const token = jwt.sign(
                 {
                     email: oauthUser.email,
@@ -88,29 +87,32 @@ app.get('/oauth/callback',
                     googleRefreshToken: oauthUser.googleRefreshToken
                 },
                 JWT_SECRET,
-                { expiresIn: '30d' }
+                { expiresIn: "30d" }
             );
 
-            // Redirect to frontend with token
-            // console.log(FRONTEND_URL);
-            res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+            console.log("🔐 Redirecting to:", `${FRONTEND}/auth/callback?token=${token}`);
+
+            res.redirect(`${FRONTEND}/auth/callback?token=${token}`);
         } catch (error) {
-            console.error('OAuth callback error:', error);
-            const FRONTEND_URL = process.env.FRONTEND_URL;
-            res.redirect(`${FRONTEND_URL}/auth/callback?error=authentication_failed`);
+            console.error("OAuth callback error:", error);
+            res.redirect(`${FRONTEND}/auth/callback?error=authentication_failed`);
         }
     }
 );
-app.use('/api/profile', profileRoutes);
-app.use('/api/apply', applyRoutes);
 
-app.get('/api/status', (req, res) => {
+/* -----------------------------------------------------
+   ✅ API STATUS (for debugging)
+------------------------------------------------------*/
+app.get("/api/status", (req, res) => {
     res.json({
-        status: 'ok',
-        mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+        status: "ok",
+        mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
     });
 });
 
+/* -----------------------------------------------------
+   ✅ START SERVER
+------------------------------------------------------*/
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
