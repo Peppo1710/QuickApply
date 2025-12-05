@@ -5,11 +5,11 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const UserProfile = require('../models/UserProfile');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET ;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const BACKEND_URL = process.env.BACKEND_URL ;
+const FRONTEND_URL = process.env.FRONTEND_URL ;
 
 // Configure Google OAuth Strategy
 if (CLIENT_ID && CLIENT_SECRET) {
