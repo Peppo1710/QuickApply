@@ -154,8 +154,15 @@ const Profile = () => {
             if (window.chrome && chrome.storage) {
                 const tokenToStore = data.token || token; // Use new token if available, otherwise existing token
                 if (tokenToStore) {
-                    chrome.storage.local.set({ authToken: tokenToStore });
+                    console.log('🔐 [PROFILE] Setting authToken in chrome.storage:', tokenToStore.substring(0, 20) + '...');
+                    chrome.storage.local.set({ authToken: tokenToStore }, () => {
+                        console.log('✅ [PROFILE] authToken set in chrome.storage successfully');
+                    });
+                } else {
+                    console.log('⚠️ [PROFILE] No token to store in chrome.storage');
                 }
+            } else {
+                console.log('⚠️ [PROFILE] chrome.storage not available (not running as extension)');
             }
 
             setProfile(data.profile || profile);
@@ -169,14 +176,24 @@ const Profile = () => {
     };
 
     const handleLogout = () => {
+        console.log('🚪 [PROFILE] Logout initiated');
         localStorage.removeItem('profileToken');
+        console.log('🗑️ [PROFILE] Removed profileToken from localStorage');
+
         if (window.chrome && chrome.storage) {
-            chrome.storage.local.remove('authToken');
+            chrome.storage.local.remove('authToken', () => {
+                console.log('🗑️ [PROFILE] Removed authToken from chrome.storage');
+            });
+        } else {
+            console.log('⚠️ [PROFILE] chrome.storage not available for logout');
         }
+
         setToken(null);
         setProfile(emptyProfile);
         setHasExistingProfile(false);
         setSuccess('Logged out successfully');
+        console.log('✅ [PROFILE] Logout complete, redirecting...');
+
         // Redirect to login after a short delay
         setTimeout(() => {
             navigate('/login');
