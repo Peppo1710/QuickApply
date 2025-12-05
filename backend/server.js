@@ -20,8 +20,13 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 // CORS configuration to allow both frontend and extension (LinkedIn) origins
+// Support multiple frontend URLs separated by comma
+const frontendUrls = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+    : ['http://localhost:5173'];
+
 const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
+    ...frontendUrls,
     'https://www.linkedin.com',
     'https://linkedin.com'
 ];
