@@ -30,12 +30,12 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps, Postman, or extension background scripts)
         if (!origin) return callback(null, true);
-        
+
         // Check if origin exactly matches or starts with allowed origins
         const isAllowed = allowedOrigins.some(allowed => {
             return origin === allowed || origin.startsWith(allowed);
         });
-        
+
         if (isAllowed) {
             callback(null, true);
         } else {
@@ -64,18 +64,18 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/auth', authRoutes);
 
 // OAuth callback route (mounted separately to match Google Console callback URL: /oauth/callback)
-app.get('/oauth/callback', 
+app.get('/oauth/callback',
     passport.authenticate('google', { session: false }),
     async (req, res) => {
         try {
-            const JWT_SECRET = process.env.JWT_SECRET ;
+            const JWT_SECRET = process.env.JWT_SECRET;
             const FRONTEND_URL = process.env.FRONTEND_URL;
             const oauthUser = req.user; // This is the OAuth info, not a DB user
-            
+
             // Generate JWT token with OAuth info embedded
             // Profile will be created in DB when user saves the form
             const token = jwt.sign(
-                { 
+                {
                     email: oauthUser.email,
                     googleId: oauthUser.googleId,
                     fullName: oauthUser.fullName,
@@ -85,12 +85,13 @@ app.get('/oauth/callback',
                 JWT_SECRET,
                 { expiresIn: '30d' }
             );
-            
+
             // Redirect to frontend with token
+            // console.log(FRONTEND_URL);
             res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
         } catch (error) {
             console.error('OAuth callback error:', error);
-            const FRONTEND_URL = process.env.FRONTEND_URL ;
+            const FRONTEND_URL = process.env.FRONTEND_URL;
             res.redirect(`${FRONTEND_URL}/auth/callback?error=authentication_failed`);
         }
     }
