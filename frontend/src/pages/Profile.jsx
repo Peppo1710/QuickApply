@@ -179,7 +179,7 @@ const Profile = () => {
         setSuccess('Logged out successfully');
         // Redirect to login after a short delay
         setTimeout(() => {
-            window.location.href = '/login';
+            navigate('/login');
         }, 1000);
     };
 
