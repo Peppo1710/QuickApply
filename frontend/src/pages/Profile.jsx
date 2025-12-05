@@ -16,6 +16,7 @@ const emptyProfile = {
 
 const Profile = () => {
     const navigate = useNavigate();
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     const [profile, setProfile] = useState({
         fullName: '',
         email: '',
@@ -62,19 +63,19 @@ const Profile = () => {
                 navigate('/login');
                 return;
             }
-            
+
             setToken(storedToken);
-            const res = await fetch('http://localhost:3000/api/profile/get', {
+            const res = await fetch(`${backendUrl}/api/profile/get`, {
                 headers: { 'Authorization': `Bearer ${storedToken}` }
             });
-            
+
             if (res.status === 401) {
                 // Token expired or invalid, redirect to login
                 localStorage.removeItem('profileToken');
                 navigate('/login');
                 return;
             }
-            
+
             if (res.ok) {
                 const data = await res.json();
                 // Check if profile exists (has required fields)
@@ -123,7 +124,7 @@ const Profile = () => {
             // Otherwise use 'save' (even if they have an OAuth token)
             const isUpdate = hasExistingProfile && Boolean(token);
             const endpoint = isUpdate ? 'update' : 'save';
-            
+
             // Always send token if available (for both new saves with OAuth token and updates)
             const headers = {
                 'Content-Type': 'application/json'
@@ -131,8 +132,8 @@ const Profile = () => {
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
-            
-            const res = await fetch(`http://localhost:3000/api/profile/${endpoint}`, {
+
+            const res = await fetch(`${backendUrl}/api/profile/${endpoint}`, {
                 method: isUpdate ? 'PUT' : 'POST',
                 headers,
                 body: JSON.stringify(payload)

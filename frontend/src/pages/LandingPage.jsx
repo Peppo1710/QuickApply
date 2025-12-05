@@ -1,7 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+
+    // Wake up the backend on component mount
+    useEffect(() => {
+        const wakeUpBackend = async () => {
+            try {
+                await fetch(`${backendUrl}/api/status`);
+            } catch (error) {
+                // Silently fail - this is just to wake up the backend
+                console.log('Backend wake-up call made');
+            }
+        };
+        wakeUpBackend();
+    }, []);
+
     return (
         <div>
             {/* Hero Section - Centered */}
