@@ -165,13 +165,7 @@ router.get('/get', authMiddleware, async (req, res) => {
         let profile = null;
 
         // Find profile by userId (if exists) or by email/googleId
-        if (req.user.userId) {
-            console.log("🔵 [BACKEND] Looking up profile by userId:", req.user.userId);
-            profile = await UserProfile.findById(req.user.userId).select('-password');
-        } else if (req.user.email) {
-            console.log("🔵 [BACKEND] Looking up profile by email:", req.user.email);
-            profile = await UserProfile.findOne({ email: req.user.email.toLowerCase() }).select('-password');
-        } else if (req.user.googleId) {
+        if (req.user.googleId) {
             console.log("🔵 [BACKEND] Looking up profile by googleId:", req.user.googleId);
             profile = await UserProfile.findOne({ googleId: req.user.googleId }).select('-password');
         }
