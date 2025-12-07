@@ -24,7 +24,8 @@ const FRONTEND = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/
 const allowedOrigins = [
     FRONTEND,
     "https://www.linkedin.com",
-    "https://linkedin.com"
+    "https://linkedin.com",
+    "chrome-extension://ikceaaappbpdmceojkbfmjlcoeokhpbe"
 ];
 
 app.use(cors({
@@ -75,8 +76,23 @@ app.get("/oauth/callback",
     passport.authenticate("google", { session: false }),
     async (req, res) => {
         try {
+            console.log("🔵 [BACKEND] OAuth callback received");
+            console.log("🔵 [BACKEND] req.user:", req.user ? {
+                email: req.user.email,
+                googleId: req.user.googleId,
+                fullName: req.user.fullName,
+                hasGoogleAccessToken: !!req.user.googleAccessToken,
+                hasGoogleRefreshToken: !!req.user.googleRefreshToken
+            } : "null");
+            
             const JWT_SECRET = process.env.JWT_SECRET;
             const oauthUser = req.user; // Google user info
+
+            if (!oauthUser) {
+                console.error("🔴 [BACKEND] OAuth user is null");
+                res.redirect(`${FRONTEND}/auth/callback?error=no_user`);
+                return;
+            }
 
             const token = jwt.sign(
                 {
@@ -90,11 +106,17 @@ app.get("/oauth/callback",
                 { expiresIn: "30d" }
             );
 
-            console.log("🔐 Redirecting to:", `${FRONTEND}/auth/callback?token=${token}`);
+            const redirectUrl = `${FRONTEND}/auth/callback?token=${token}`;
+            console.log("🔵 [BACKEND] Token generated successfully");
+            console.log("🔵 [BACKEND] Token length:", token.length);
+            console.log("🔵 [BACKEND] Token preview:", token.substring(0, 50) + "...");
+            console.log("🔵 [BACKEND] Redirecting to:", redirectUrl);
+            console.log("🔵 [BACKEND] FRONTEND URL:", FRONTEND);
 
-            res.redirect(`${FRONTEND}/auth/callback?token=${token}`);
+            res.redirect(redirectUrl);
         } catch (error) {
-            console.error("OAuth callback error:", error);
+            console.error("🔴 [BACKEND] OAuth callback error:", error);
+            console.error("🔴 [BACKEND] Error stack:", error.stack);
             res.redirect(`${FRONTEND}/auth/callback?error=authentication_failed`);
         }
     }

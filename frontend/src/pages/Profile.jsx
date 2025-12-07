@@ -56,20 +56,34 @@ const Profile = () => {
     }, [saveToast]);
 
     const fetchProfile = async () => {
+        console.log("🟣 [FRONTEND] Profile.fetchProfile called");
         try {
             const storedToken = localStorage.getItem('profileToken');
+            console.log("🟣 [FRONTEND] Profile: Token from localStorage:", storedToken ? `${storedToken.substring(0, 50)}...` : "null");
+            console.log("🟣 [FRONTEND] Profile: Token exists:", storedToken ? "YES" : "NO");
+            
             if (!storedToken) {
+                console.error("🔴 [FRONTEND] Profile: No token, redirecting to login");
                 // No token, redirect to login
                 navigate('/login');
                 return;
             }
 
+            console.log("🟣 [FRONTEND] Profile: Setting token in state");
             setToken(storedToken);
+            
+            console.log("🟣 [FRONTEND] Profile: Fetching profile from backend");
+            console.log("🟣 [FRONTEND] Profile: Backend URL:", `${backendUrl}/api/profile/get`);
+            
             const res = await fetch(`${backendUrl}/api/profile/get`, {
                 headers: { 'Authorization': `Bearer ${storedToken}` }
             });
 
+            console.log("🟣 [FRONTEND] Profile: Response status:", res.status);
+            console.log("🟣 [FRONTEND] Profile: Response ok:", res.ok);
+
             if (res.status === 401) {
+                console.error("🔴 [FRONTEND] Profile: 401 Unauthorized, token invalid/expired");
                 // Token expired or invalid, redirect to login
                 localStorage.removeItem('profileToken');
                 navigate('/login');
@@ -78,11 +92,16 @@ const Profile = () => {
 
             if (res.ok) {
                 const data = await res.json();
+                console.log("🟣 [FRONTEND] Profile: Response data:", data);
+                console.log("🟣 [FRONTEND] Profile: Has email:", data && data.email ? "YES" : "NO");
+                
                 // Check if profile exists (has required fields)
                 if (data && data.email) {
+                    console.log("🟣 [FRONTEND] Profile: Existing profile found, setting hasExistingProfile = true");
                     setProfile(data);
                     setHasExistingProfile(true);
                 } else {
+                    console.log("🟣 [FRONTEND] Profile: No existing profile, setting hasExistingProfile = false");
                     // User is authenticated but hasn't saved profile yet
                     // Pre-fill with email from token if available
                     const storedToken = localStorage.getItem('profileToken');
@@ -96,10 +115,14 @@ const Profile = () => {
                     }
                     setHasExistingProfile(false);
                 }
+            } else {
+                console.error("🔴 [FRONTEND] Profile: Response not ok, status:", res.status);
             }
         } catch (err) {
-            console.error('Failed to load profile:', err);
+            console.error("🔴 [FRONTEND] Profile: Error in fetchProfile:", err);
+            console.error("🔴 [FRONTEND] Profile: Error stack:", err.stack);
         } finally {
+            console.log("🟣 [FRONTEND] Profile: Setting loading to false");
             setLoading(false);
         }
     };

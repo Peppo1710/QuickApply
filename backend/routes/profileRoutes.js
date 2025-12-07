@@ -155,25 +155,42 @@ router.put('/update', authMiddleware, async (req, res) => {
 // GET /api/profile/get - Get profile with JWT
 router.get('/get', authMiddleware, async (req, res) => {
     try {
+        console.log("🔵 [BACKEND] GET /api/profile/get called");
+        console.log("🔵 [BACKEND] req.user:", req.user ? {
+            userId: req.user.userId,
+            email: req.user.email,
+            googleId: req.user.googleId
+        } : "null");
+        
         let profile = null;
 
         // Find profile by userId (if exists) or by email/googleId
         if (req.user.userId) {
+            console.log("🔵 [BACKEND] Looking up profile by userId:", req.user.userId);
             profile = await UserProfile.findById(req.user.userId).select('-password');
         } else if (req.user.email) {
+            console.log("🔵 [BACKEND] Looking up profile by email:", req.user.email);
             profile = await UserProfile.findOne({ email: req.user.email.toLowerCase() }).select('-password');
         } else if (req.user.googleId) {
+            console.log("🔵 [BACKEND] Looking up profile by googleId:", req.user.googleId);
             profile = await UserProfile.findOne({ googleId: req.user.googleId }).select('-password');
         }
 
         if (!profile) {
+            console.log("🔵 [BACKEND] No profile found, returning empty object");
             // Return empty profile object if not found (user hasn't saved profile yet)
             return res.json({});
         }
 
+        console.log("🔵 [BACKEND] Profile found:", {
+            _id: profile._id,
+            email: profile.email,
+            fullName: profile.fullName
+        });
         res.json(profile);
     } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error("🔴 [BACKEND] Error fetching profile:", error);
+        console.error("🔴 [BACKEND] Error stack:", error.stack);
         res.status(500).json({ error: 'Failed to load profile' });
     }
 });
