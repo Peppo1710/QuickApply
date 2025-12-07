@@ -15,11 +15,7 @@ const getProfile = async (userInfo) => {
     let profile = null;
     
     // Find profile by userId (if exists) or by email/googleId
-    if (userInfo.userId) {
-        profile = await UserProfile.findById(userInfo.userId).select('-password');
-    } else if (userInfo.email) {
-        profile = await UserProfile.findOne({ email: userInfo.email.toLowerCase() }).select('-password');
-    } else if (userInfo.googleId) {
+    if (userInfo.googleId) {
         profile = await UserProfile.findOne({ googleId: userInfo.googleId }).select('-password');
     }
     
