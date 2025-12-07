@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const AuthCallback = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { checkSession } = useAuth();
 
     useEffect(() => {
         console.log("🟢 [FRONTEND] AuthCallback component mounted");
         console.log("🟢 [FRONTEND] Current URL:", window.location.href);
         console.log("🟢 [FRONTEND] Search params:", window.location.search);
-        
+
         const token = searchParams.get('token');
         const error = searchParams.get('error');
 
@@ -17,7 +19,7 @@ const AuthCallback = () => {
         console.log("🟢 [FRONTEND] Error from URL:", error || "null");
 
         if (error) {
-            console.error("🔴 [FRONTEND] Authentication error received:", error);
+            console.error("🔴 [FRONTEND] AuthCallback: Authentication error received:", error);
             navigate('/login?error=authentication_failed', { replace: true });
             return;
         }
@@ -25,17 +27,20 @@ const AuthCallback = () => {
         if (token) {
             console.log("🟢 [FRONTEND] Token received, storing in localStorage");
             console.log("🟢 [FRONTEND] Token length:", token.length);
-            
+
             // Store token in localStorage for authentication
             // NOTE: Do NOT set chrome.storage here - extension status only turns on after profile is saved
             localStorage.setItem('profileToken', token);
-            
+
             // Verify token was stored
             const storedToken = localStorage.getItem('profileToken');
             console.log("🟢 [FRONTEND] Token stored in localStorage:", storedToken ? "YES" : "NO");
             console.log("🟢 [FRONTEND] Stored token matches:", storedToken === token ? "YES" : "NO");
             console.log("🟢 [FRONTEND] Stored token length:", storedToken?.length || 0);
-            
+
+            // Update auth context to reflect logged-in state
+            checkSession();
+
             // Use setTimeout to ensure localStorage is written before navigation
             // This prevents race conditions with ProtectedRoute
             setTimeout(() => {
@@ -44,10 +49,10 @@ const AuthCallback = () => {
                 navigate('/profile', { replace: true });
             }, 0);
         } else {
-            console.error("🔴 [FRONTEND] No token in URL, redirecting to login");
+            console.error("🔴 [FRONTEND] AuthCallback: No token in URL, redirecting to login");
             navigate('/login?error=no_token', { replace: true });
         }
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, checkSession]);
 
     return (
         <div className="min-h-screen flex items-center justify-center">

@@ -1,7 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = ({ children }) => {
+    const { isAuthenticated, logout } = useAuth();
+
     return (
         <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f5f5f5' }}>
             <nav
@@ -15,12 +18,32 @@ const Layout = ({ children }) => {
                             <span className="font-bold text-xl tracking-tight">QuickApply</span>
                         </Link>
 
-                        <Link
-                            to="/login"
-                            className="px-6 py-2.5 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors"
-                        >
-                            Get Started
-                        </Link>
+                        <div className="flex gap-3">
+                            {isAuthenticated ? (
+                                <>
+                                    <Link
+                                        to="/profile"
+                                        className="px-6 py-2.5 bg-white text-black rounded font-medium hover:bg-gray-50 transition-colors"
+                                        style={{ border: '2px solid #000' }}
+                                    >
+                                        Go to Profile
+                                    </Link>
+                                    <button
+                                        onClick={logout}
+                                        className="px-6 py-2.5 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors"
+                                    >
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <Link
+                                    to="/login"
+                                    className="px-6 py-2.5 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors"
+                                >
+                                    Get Started
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
             </nav>

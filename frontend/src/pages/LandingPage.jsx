@@ -1,21 +1,23 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    const { isAuthenticated } = useAuth();
 
-    // Wake up the backend on component mount
+    // Wake up backend on mount
     useEffect(() => {
         const wakeUpBackend = async () => {
             try {
                 await fetch(`${backendUrl}/api/status`);
             } catch (error) {
-                // Silently fail - this is just to wake up the backend
-                console.log('Backend wake-up call made');
+                console.error('🔴 [FRONTEND] Error waking up backend:', error);
             }
         };
+
         wakeUpBackend();
-    }, []);
+    }, [backendUrl]);
 
     return (
         <div>
@@ -32,22 +34,38 @@ const LandingPage = () => {
                 </p>
 
                 <div className="flex gap-4 justify-center">
-                    <Link
-                        to="/login"
-                        className="px-8 py-3 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
-                    >
-                        Get Started
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M6 12l4-4-4-4" />
-                        </svg>
-                    </Link>
-                    <a
-                        href="/demo"
-                        className="px-8 py-3 bg-white text-black rounded font-medium hover:bg-gray-50 transition-colors"
-                        style={{ border: '2px solid #000' }}
-                    >
-                        Demo
-                    </a>
+                    {!isAuthenticated ? (
+                        <>
+                            <Link
+                                to="/login"
+                                className="px-8 py-3 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
+                            >
+                                Get Started
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M6 12l4-4-4-4" />
+                                </svg>
+                            </Link>
+                            <a
+                                href="/demo"
+                                className="px-8 py-3 bg-white text-black rounded font-medium hover:bg-gray-50 transition-colors"
+                                style={{ border: '2px solid #000' }}
+                            >
+                                Demo
+                            </a>
+                        </>
+                    ) : (
+                        <Link
+                            to="https://chrome.google.com/webstore"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-8 py-3 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
+                        >
+                            Go to Extension
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M6 12l4-4-4-4" />
+                            </svg>
+                        </Link>
+                    )}
                 </div>
             </section>
 

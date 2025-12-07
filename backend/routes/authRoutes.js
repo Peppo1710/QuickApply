@@ -58,7 +58,35 @@ router.get('/google',
 );
 
 
-// Get current user (for checking auth status)
+// Check session status
+router.get('/session', async (req, res) => {
+    try {
+        if (req.session && req.session.email) {
+            res.json({ 
+                authenticated: true, 
+                email: req.session.email 
+            });
+        } else {
+            res.json({ authenticated: false });
+        }
+    } catch (error) {
+        console.error('🔴 [BACKEND] Error checking session:', error);
+        res.status(500).json({ error: 'Failed to check session' });
+    }
+});
+
+// Logout - destroy session
+router.post('/logout', async (req, res) => {
+    try {
+        req.session = null;
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('🔴 [BACKEND] Error during logout:', error);
+        res.status(500).json({ error: 'Failed to logout' });
+    }
+});
+
+// Get current user (for checking auth status via JWT)
 router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
@@ -70,28 +98,25 @@ router.get('/me', async (req, res) => {
         const token = authHeader.substring(7);
         const decoded = jwt.verify(token, JWT_SECRET);
         
-        let user = null;
-        
-        // Find user by userId (if exists) or by email/googleId
-        if (decoded.userId) {
-            user = await UserProfile.findById(decoded.userId).select('-password -googleAccessToken -googleRefreshToken');
-        } else if (decoded.email) {
-            user = await UserProfile.findOne({ email: decoded.email.toLowerCase() }).select('-password -googleAccessToken -googleRefreshToken');
-        } else if (decoded.googleId) {
-            user = await UserProfile.findOne({ googleId: decoded.googleId }).select('-password -googleAccessToken -googleRefreshToken');
+        if (!decoded.email) {
+            return res.status(401).json({ error: 'Invalid token' });
         }
+        
+        // Find user by email
+        const user = await UserProfile.findOne({ email: decoded.email.toLowerCase() }).select('-password -googleAccessToken -googleRefreshToken');
         
         if (!user) {
             // User is authenticated but hasn't saved profile yet
             return res.json({ 
                 authenticated: true, 
                 hasProfile: false,
-                email: decoded.email || null
+                email: decoded.email
             });
         }
         
         res.json({ user, authenticated: true, hasProfile: true });
     } catch (error) {
+        console.error('🔴 [BACKEND] Error in /me endpoint:', error);
         res.status(401).json({ error: 'Invalid token' });
     }
 });

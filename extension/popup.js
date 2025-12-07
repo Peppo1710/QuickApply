@@ -1,3 +1,5 @@
+
+
 // Popup logic: show whether Quick Apply is ON (profile saved) or OFF
 document.addEventListener('DOMContentLoaded', () => {
     const statusBadge = document.getElementById('statusBadge');
@@ -8,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.storage.local.get(['authToken'], async (result) => {
         const token = result.authToken || null;
+        console.log(token)
 
         if (!token) {
             // No token at all
@@ -21,13 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Token exists, now check if profile is actually saved
         try {
-            const backendUrl = 'https://quickapply-4kue.onrender.com'; // Production backend
+            const backendUrl = 'http://localhost:3000'; // Production backend
             const res = await fetch(`${backendUrl}/api/profile/get`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            console.log(res.data)
 
             if (res.ok) {
                 const data = await res.json();
+                console.log(data)
                 // Check if profile has required fields (email is mandatory)
                 if (data && data.email && data.fullName && data.currentRole) {
                     // Profile is saved and complete

@@ -12,12 +12,12 @@ const { marked } = require('marked');
 const groqApiKey = process.env.GROQ_API_KEY 
 // Helper to get profile from DB
 const getProfile = async (userInfo) => {
-    let profile = null;
-    
-    // Find profile by userId (if exists) or by email/googleId
-    if (userInfo.googleId) {
-        profile = await UserProfile.findOne({ googleId: userInfo.googleId }).select('-password');
+    if (!userInfo || !userInfo.email) {
+        throw new Error('Invalid user information');
     }
+    
+    // Find profile by email
+    const profile = await UserProfile.findOne({ email: userInfo.email.toLowerCase() }).select('-password');
     
     if (!profile) {
         throw new Error('Profile not found. Please set up your profile first.');
@@ -72,7 +72,7 @@ ${currentEmail}`;
         res.json({ rewrittenEmail: cleaned });
 
     } catch (error) {
-        console.error('Rewrite Error:', error);
+        console.error('🔴 [BACKEND] Rewrite Error:', error);
         res.status(500).json({ error: 'Failed to rewrite email' });
     }
 });
@@ -146,7 +146,7 @@ router.post('/', authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Apply Error:', error);
+        console.error('🔴 [BACKEND] Apply Error:', error);
         res.status(500).json({ error: error.message || 'Failed to process application' });
     }
 });

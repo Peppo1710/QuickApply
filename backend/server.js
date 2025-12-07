@@ -5,6 +5,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const cookieSession = require('cookie-session');
 
 const profileRoutes = require('./routes/profileRoutes');
 const applyRoutes = require('./routes/applyRoutes');
@@ -25,22 +26,22 @@ const allowedOrigins = [
     FRONTEND,
     "https://www.linkedin.com",
     "https://linkedin.com",
-    "chrome-extension://ikceaaappbpdmceojkbfmjlcoeokhpbe"
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (Postman, extensions, mobile apps)
+        // Allow requests with no origin (Postman, curl, etc.)
         if (!origin) return callback(null, true);
 
         console.log("🌐 Incoming Origin:", origin);
 
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
+        const isWhitelisted =
+            allowedOrigins.includes(origin) ||
+            origin.startsWith("http://localhost:") ||
+            origin.startsWith("https://localhost:") ||
+            origin.startsWith("chrome-extension://");
 
-        // Allow local dev
-        if (origin.startsWith("http://localhost:") || origin.startsWith("https://localhost:")) {
+        if (isWhitelisted) {
             return callback(null, true);
         }
 
@@ -52,7 +53,21 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+
 app.use(express.json());
+
+/* -----------------------------------------------------
+   ✅ SESSION CONFIGURATION
+------------------------------------------------------*/
+app.use(cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'your-session-secret-key-change-in-production'],
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+    sameSite: 'lax'
+}));
+
 app.use(passport.initialize());
 
 /* -----------------------------------------------------
@@ -94,20 +109,23 @@ app.get("/oauth/callback",
                 return;
             }
 
+            // Create session with user email
+            req.session.email = oauthUser.email;
+            req.session.googleId = oauthUser.googleId;
+            req.session.googleAccessToken = oauthUser.googleAccessToken;
+            req.session.googleRefreshToken = oauthUser.googleRefreshToken;
+
+            // Generate JWT with only email
             const token = jwt.sign(
-                {
-                    email: oauthUser.email,
-                    googleId: oauthUser.googleId,
-                    fullName: oauthUser.fullName,
-                    googleAccessToken: oauthUser.googleAccessToken,
-                    googleRefreshToken: oauthUser.googleRefreshToken
-                },
+                { email: oauthUser.email },
                 JWT_SECRET,
                 { expiresIn: "30d" }
             );
+            console.log(token.email);
+            
 
             const redirectUrl = `${FRONTEND}/auth/callback?token=${token}`;
-            console.log("🔵 [BACKEND] Token generated successfully");
+            console.log("🔵 [BACKEND] Session created and token generated successfully");
             console.log("🔵 [BACKEND] Token length:", token.length);
             console.log("🔵 [BACKEND] Token preview:", token.substring(0, 50) + "...");
             console.log("🔵 [BACKEND] Redirecting to:", redirectUrl);

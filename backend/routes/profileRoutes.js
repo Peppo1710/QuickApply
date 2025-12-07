@@ -12,31 +12,32 @@ router.post('/save', async (req, res) => {
     try {
         const profileData = req.body;
         
-        // Check if request has OAuth token in Authorization header
+        // Check if request has OAuth token in Authorization header or session
         let oauthInfo = null;
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {
             try {
                 const token = authHeader.substring(7);
                 const decoded = jwt.verify(token, JWT_SECRET);
-                // Extract OAuth info from JWT if present
-                if (decoded.googleId) {
-                    oauthInfo = {
-                        googleId: decoded.googleId,
-                        googleAccessToken: decoded.googleAccessToken,
-                        googleRefreshToken: decoded.googleRefreshToken
-                    };
                     // Use email from JWT if not provided in body
                     if (!profileData.email && decoded.email) {
                         profileData.email = decoded.email;
                     }
-                    // Use fullName from JWT if not provided in body
-                    if (!profileData.fullName && decoded.fullName) {
-                        profileData.fullName = decoded.fullName;
-                    }
-                }
             } catch (err) {
-                // Invalid token, continue without OAuth info
+                // Invalid token, continue
+            }
+        }
+        
+        // Check session for OAuth info
+        if (req.session && req.session.googleId) {
+            oauthInfo = {
+                googleId: req.session.googleId,
+                googleAccessToken: req.session.googleAccessToken,
+                googleRefreshToken: req.session.googleRefreshToken
+            };
+            // Use email from session if not provided in body
+            if (!profileData.email && req.session.email) {
+                profileData.email = req.session.email;
             }
         }
 
@@ -81,9 +82,9 @@ router.post('/save', async (req, res) => {
             await profile.save();
         }
 
-        // Generate new JWT with userId (now that we have a DB record)
+        // Generate new JWT with only email
         const token = jwt.sign(
-            { userId: profile._id, email: profile.email },
+            { email: profile.email },
             JWT_SECRET,
             { expiresIn: '30d' }
         );
@@ -97,7 +98,7 @@ router.post('/save', async (req, res) => {
             token
         });
     } catch (error) {
-        console.error('Error saving profile:', error);
+        console.error('🔴 [BACKEND] Error saving profile:', error);
         res.status(500).json({ error: 'Failed to save profile', details: error.message });
     }
 });
@@ -106,16 +107,13 @@ router.post('/save', async (req, res) => {
 router.put('/update', authMiddleware, async (req, res) => {
     try {
         const updates = { ...req.body };
-        let profile = null;
-
-        // Find profile by userId (if exists) or by email/googleId
-        if (req.user.userId) {
-            profile = await UserProfile.findById(req.user.userId);
-        } else if (req.user.email) {
-            profile = await UserProfile.findOne({ email: req.user.email.toLowerCase() });
-        } else if (req.user.googleId) {
-            profile = await UserProfile.findOne({ googleId: req.user.googleId });
+        
+        if (!req.user || !req.user.email) {
+            return res.status(401).json({ error: 'Invalid authentication' });
         }
+
+        // Find profile by email
+        let profile = await UserProfile.findOne({ email: req.user.email.toLowerCase() });
 
         if (!profile) {
             return res.status(404).json({ error: 'Profile not found. Please save your profile first.' });
@@ -125,14 +123,14 @@ router.put('/update', authMiddleware, async (req, res) => {
             updates.email = updates.email.toLowerCase();
         }
 
-        // Add OAuth info from JWT if present and not already in profile
-        if (req.user.googleId && !profile.googleId) {
-            profile.googleId = req.user.googleId;
-            if (req.user.googleAccessToken) {
-                profile.googleAccessToken = req.user.googleAccessToken;
+        // Add OAuth info from session if present and not already in profile
+        if (req.session && req.session.googleId && !profile.googleId) {
+            profile.googleId = req.session.googleId;
+            if (req.session.googleAccessToken) {
+                profile.googleAccessToken = req.session.googleAccessToken;
             }
-            if (req.user.googleRefreshToken) {
-                profile.googleRefreshToken = req.user.googleRefreshToken;
+            if (req.session.googleRefreshToken) {
+                profile.googleRefreshToken = req.session.googleRefreshToken;
             }
         }
 
@@ -147,7 +145,7 @@ router.put('/update', authMiddleware, async (req, res) => {
             profile: profileResponse
         });
     } catch (error) {
-        console.error('Error updating profile:', error);
+        console.error('🔴 [BACKEND] Error updating profile:', error);
         res.status(500).json({ error: 'Failed to update profile', details: error.message });
     }
 });
@@ -157,18 +155,15 @@ router.get('/get', authMiddleware, async (req, res) => {
     try {
         console.log("🔵 [BACKEND] GET /api/profile/get called");
         console.log("🔵 [BACKEND] req.user:", req.user ? {
-            userId: req.user.userId,
-            email: req.user.email,
-            googleId: req.user.googleId
+            email: req.user.email
         } : "null");
         
-        let profile = null;
-
-        // Find profile by userId (if exists) or by email/googleId
-        if (req.user.googleId) {
-            console.log("🔵 [BACKEND] Looking up profile by googleId:", req.user.googleId);
-            profile = await UserProfile.findOne({ googleId: req.user.googleId }).select('-password');
+        if (!req.user || !req.user.email) {
+            return res.status(401).json({ error: 'Invalid authentication' });
         }
+
+        // Find profile by email
+        const profile = await UserProfile.findOne({ email: req.user.email.toLowerCase() }).select('-password');
 
         if (!profile) {
             console.log("🔵 [BACKEND] No profile found, returning empty object");

@@ -23,16 +23,16 @@ const authMiddleware = async (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         console.log("🔵 [BACKEND] Token verified successfully");
         console.log("🔵 [BACKEND] Decoded token:", {
-            userId: decoded.userId,
-            email: decoded.email,
-            googleId: decoded.googleId,
-            fullName: decoded.fullName
+            email: decoded.email
         });
         
-        // JWT can contain either:
-        // 1. { userId, email } - after profile is saved
-        // 2. { email, googleId, ... } - after OAuth but before profile is saved
-        req.user = decoded;
+        // JWT contains only email
+        if (!decoded.email) {
+            console.error("🔴 [BACKEND] Token missing email");
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        
+        req.user = { email: decoded.email };
 
         next();
     } catch (error) {

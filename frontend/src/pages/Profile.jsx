@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const emptyProfile = {
     fullName: '',
@@ -17,6 +18,7 @@ const emptyProfile = {
 const Profile = () => {
     const navigate = useNavigate();
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    const { logout } = useAuth();
     const [profile, setProfile] = useState({
         fullName: '',
         email: '',
@@ -36,6 +38,9 @@ const Profile = () => {
     const [saveToast, setSaveToast] = useState(null);
     const [token, setToken] = useState(null);
     const [hasExistingProfile, setHasExistingProfile] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [googleEmail, setGoogleEmail] = useState('');
+    const [savedProfile, setSavedProfile] = useState(null);
 
     useEffect(() => {
         fetchProfile();
@@ -61,7 +66,7 @@ const Profile = () => {
             const storedToken = localStorage.getItem('profileToken');
             console.log("🟣 [FRONTEND] Profile: Token from localStorage:", storedToken ? `${storedToken.substring(0, 50)}...` : "null");
             console.log("🟣 [FRONTEND] Profile: Token exists:", storedToken ? "YES" : "NO");
-            
+
             if (!storedToken) {
                 console.error("🔴 [FRONTEND] Profile: No token, redirecting to login");
                 // No token, redirect to login
@@ -71,10 +76,31 @@ const Profile = () => {
 
             console.log("🟣 [FRONTEND] Profile: Setting token in state");
             setToken(storedToken);
-            
+
+            // Fetch email from session
+            try {
+                const sessionRes = await fetch(`${backendUrl}/api/auth/session`, {
+                    credentials: 'include'
+                });
+                if (sessionRes.ok) {
+                    const sessionData = await sessionRes.json();
+                    if (sessionData.authenticated && sessionData.email) {
+                        console.log("🟣 [FRONTEND] Profile: Email from session:", sessionData.email);
+                        setGoogleEmail(sessionData.email);
+                        // Pre-fill email in profile if not already set
+                        setProfile(prev => ({
+                            ...prev,
+                            email: prev.email || sessionData.email
+                        }));
+                    }
+                }
+            } catch (err) {
+                console.error("🔴 [FRONTEND] Profile: Error fetching session:", err);
+            }
+
             console.log("🟣 [FRONTEND] Profile: Fetching profile from backend");
             console.log("🟣 [FRONTEND] Profile: Backend URL:", `${backendUrl}/api/profile/get`);
-            
+
             const res = await fetch(`${backendUrl}/api/profile/get`, {
                 headers: { 'Authorization': `Bearer ${storedToken}` }
             });
@@ -94,33 +120,38 @@ const Profile = () => {
                 const data = await res.json();
                 console.log("🟣 [FRONTEND] Profile: Response data:", data);
                 console.log("🟣 [FRONTEND] Profile: Has email:", data && data.email ? "YES" : "NO");
-                
+
                 // Check if profile exists (has required fields)
                 if (data && data.email) {
                     console.log("🟣 [FRONTEND] Profile: Existing profile found, setting hasExistingProfile = true");
-                    setProfile(data);
+                    // Ensure email is set from Google auth (not from saved profile)
+                    const profileData = {
+                        ...data,
+                        email: googleEmail || data.email
+                    };
+                    setProfile(profileData);
+                    setSavedProfile(profileData); // Save a copy for cancel functionality
                     setHasExistingProfile(true);
                 } else {
                     console.log("🟣 [FRONTEND] Profile: No existing profile, setting hasExistingProfile = false");
-                    // User is authenticated but hasn't saved profile yet
-                    // Pre-fill with email from token if available
-                    const storedToken = localStorage.getItem('profileToken');
-                    if (storedToken) {
-                        try {
-                            // Try to decode token to get email (if it's an OAuth token)
-                            // This is just for display, actual email will come from backend
-                        } catch (e) {
-                            // Ignore
-                        }
-                    }
+                    // Ensure email is set from Google auth
+                    const profileData = {
+                        ...emptyProfile,
+                        email: googleEmail || ''
+                    };
+                    setProfile(profileData);
+                    setSavedProfile(profileData);
                     setHasExistingProfile(false);
                 }
             } else {
+                const errorText = await res.text();
                 console.error("🔴 [FRONTEND] Profile: Response not ok, status:", res.status);
+                console.error("🔴 [FRONTEND] Profile: Error response:", errorText);
             }
         } catch (err) {
             console.error("🔴 [FRONTEND] Profile: Error in fetchProfile:", err);
             console.error("🔴 [FRONTEND] Profile: Error stack:", err.stack);
+            setError('Failed to load profile. Please try again.');
         } finally {
             console.log("🟣 [FRONTEND] Profile: Setting loading to false");
             setLoading(false);
@@ -142,6 +173,8 @@ const Profile = () => {
             delete payload._id;
             delete payload.__v;
             delete payload.lastUpdated;
+            // Ensure email is always from Google auth
+            payload.email = googleEmail || profile.email;
 
             // Use 'update' only if user has an existing saved profile
             // Otherwise use 'save' (even if they have an OAuth token)
@@ -162,7 +195,12 @@ const Profile = () => {
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error('Failed to save profile');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Failed to save profile' }));
+                console.error("🔴 [FRONTEND] Profile: Save failed, status:", res.status);
+                console.error("🔴 [FRONTEND] Profile: Error response:", errorData);
+                throw new Error(errorData.error || 'Failed to save profile');
+            }
 
             const data = await res.json();
 
@@ -188,52 +226,63 @@ const Profile = () => {
                 console.log('⚠️ [PROFILE] chrome.storage not available (not running as extension)');
             }
 
-            setProfile(data.profile || profile);
+            const savedData = {
+                ...(data.profile || profile),
+                email: googleEmail || (data.profile?.email || profile.email)
+            };
+            setProfile(savedData);
+            setSavedProfile(savedData); // Update saved profile copy
             setHasExistingProfile(true);
             setSaveToast('Changes saved successfully!');
+            setIsEditing(false); // Exit edit mode after saving
         } catch (err) {
+            console.error("🔴 [FRONTEND] Profile: Error saving profile:", err);
+            console.error("🔴 [FRONTEND] Profile: Error message:", err.message);
             setError(err.message);
         } finally {
             setSaving(false);
         }
     };
 
-    const handleLogout = () => {
-        console.log('🚪 [PROFILE] Logout initiated');
-        localStorage.removeItem('profileToken');
-        console.log('🗑️ [PROFILE] Removed profileToken from localStorage');
+    const handleEdit = () => {
+        // Save current state before entering edit mode
+        setSavedProfile({ ...profile });
+        setIsEditing(true);
+    };
 
-        if (window.chrome && chrome.storage) {
-            chrome.storage.local.remove('authToken', () => {
-                console.log('🗑️ [PROFILE] Removed authToken from chrome.storage');
-            });
-        } else {
-            console.log('⚠️ [PROFILE] chrome.storage not available for logout');
+    const handleCancel = () => {
+        // Reset profile to saved state
+        if (savedProfile) {
+            setProfile({ ...savedProfile });
         }
+        setIsEditing(false);
+    };
 
-        setToken(null);
-        setProfile(emptyProfile);
-        setHasExistingProfile(false);
-        setSuccess('Logged out successfully');
-        console.log('✅ [PROFILE] Logout complete, redirecting...');
-
-        // Redirect to login after a short delay
-        setTimeout(() => {
-            navigate('/login');
-        }, 1000);
+    const handleLogout = () => {
+        console.log('🚪 [PROFILE] Logout initiated via context');
+        logout();
     };
 
     const lockedInputStyle = useMemo(() => ({
-        border: `2px solid ${hasExistingProfile ? '#999' : '#000'}`,
-        backgroundColor: hasExistingProfile ? '#f5f5f5' : '#fff',
+        border: `2px solid ${!isEditing ? '#999' : '#000'}`,
+        backgroundColor: !isEditing ? '#f5f5f5' : '#fff',
         transition: 'all 0.2s ease',
-        boxShadow: hasExistingProfile ? 'inset 0 0 0 1px rgba(0,0,0,0.04)' : 'none'
-    }), [hasExistingProfile]);
+        boxShadow: !isEditing ? 'inset 0 0 0 1px rgba(0,0,0,0.04)' : 'none',
+        cursor: !isEditing ? 'not-allowed' : 'text'
+    }), [isEditing]);
 
-    const lockedTextAreaStyle = {
+    const lockedTextAreaStyle = useMemo(() => ({
         ...lockedInputStyle,
         resize: 'none'
-    };
+    }), [lockedInputStyle]);
+
+    const emailInputStyle = useMemo(() => ({
+        border: '2px solid #999',
+        backgroundColor: '#f5f5f5',
+        transition: 'all 0.2s ease',
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)',
+        cursor: 'not-allowed'
+    }), []);
 
     if (loading) {
         return (
@@ -251,13 +300,22 @@ const Profile = () => {
                     <p className="text-gray-600 mt-2">Set up your details for automated job applications</p>
                 </div>
                 {token && (
-                    <button
-                        onClick={handleLogout}
-                        className="px-6 py-2.5 bg-white rounded font-medium hover:bg-gray-50 transition-colors"
-                        style={{ border: '2px solid #000' }}
-                    >
-                        Logout
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={isEditing ? handleCancel : handleEdit}
+                            className="px-6 py-2.5 bg-white rounded font-medium hover:bg-gray-50 transition-colors"
+                            style={{ border: '2px solid #000' }}
+                        >
+                            {isEditing ? 'Cancel' : 'Edit'}
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="px-6 py-2.5 bg-white rounded font-medium hover:bg-gray-50 transition-colors"
+                            style={{ border: '2px solid #000' }}
+                        >
+                            Logout
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -286,6 +344,8 @@ const Profile = () => {
                                 value={profile.fullName}
                                 onChange={handleChange}
                                 required
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="John Doe"
@@ -296,11 +356,12 @@ const Profile = () => {
                             <input
                                 type="email"
                                 name="email"
-                                value={profile.email}
-                                onChange={handleChange}
+                                value={googleEmail || profile.email}
+                                readOnly
+                                disabled
                                 required
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
-                                style={lockedInputStyle}
+                                style={emailInputStyle}
                                 placeholder="john@example.com"
                             />
                         </div>
@@ -311,6 +372,8 @@ const Profile = () => {
                                 name="phone"
                                 value={profile.phone}
                                 onChange={handleChange}
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="+1 234 567 8900"
@@ -324,6 +387,8 @@ const Profile = () => {
                                 value={profile.currentRole}
                                 onChange={handleChange}
                                 required
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="Software Engineer"
@@ -344,6 +409,8 @@ const Profile = () => {
                                 onChange={handleChange}
                                 required
                                 rows="4"
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedTextAreaStyle}
                                 placeholder="Brief professional summary..."
@@ -357,6 +424,8 @@ const Profile = () => {
                                 value={profile.skills}
                                 onChange={handleChange}
                                 required
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="React, Node.js, Python, AWS..."
@@ -376,6 +445,8 @@ const Profile = () => {
                                 name="resumeUrl"
                                 value={profile.resumeUrl}
                                 onChange={handleChange}
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="https://..."
@@ -388,6 +459,8 @@ const Profile = () => {
                                 name="portfolioUrl"
                                 value={profile.portfolioUrl}
                                 onChange={handleChange}
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="https://..."
@@ -400,6 +473,8 @@ const Profile = () => {
                                 name="linkedinUrl"
                                 value={profile.linkedinUrl}
                                 onChange={handleChange}
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="https://linkedin.com/in/..."
@@ -412,6 +487,8 @@ const Profile = () => {
                                 name="githubUrl"
                                 value={profile.githubUrl}
                                 onChange={handleChange}
+                                disabled={!isEditing}
+                                readOnly={!isEditing}
                                 className="w-full px-4 py-2.5 rounded focus:outline-none"
                                 style={lockedInputStyle}
                                 placeholder="https://github.com/..."
@@ -436,7 +513,7 @@ const Profile = () => {
                     )}
                     <button
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || !isEditing}
                         className="px-8 py-3 bg-black text-white rounded font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors"
                     >
                         {saving ? 'Saving...' : 'Save Profile'}
