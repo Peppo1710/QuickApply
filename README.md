@@ -1,4 +1,4 @@
-# LinkedIn Quick Apply 🚀
+# LinkedIn Quick Apply 
 
 Automate your LinkedIn job applications with AI-powered email generation and one-click apply functionality.
 
