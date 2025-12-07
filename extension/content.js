@@ -2,14 +2,16 @@
 // - On the profile web app, it syncs the saved JWT token into chrome.storage for the extension.
 // - On LinkedIn, it injects Quick Apply controls.
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://quickapply-4kue.onrender.com/api';
 const log = (...args) => console.log('[Quick Apply]', ...args);
 const warn = (...args) => console.warn('[Quick Apply]', ...args);
 const PROFILE_APP_ORIGINS = [
     'http://localhost:5173',
     'https://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://127.0.0.1:5173'
+    'https://127.0.0.1:5173',
+    'https://quickapply.pradyumn.co.in',
+
 ];
 const isProfileAppContext = PROFILE_APP_ORIGINS.some(origin =>
     window.location.origin.startsWith(origin)
