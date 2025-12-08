@@ -12,8 +12,7 @@
   "devCommand": "npm run dev",
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/auth/callback",
