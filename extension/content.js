@@ -533,7 +533,7 @@ async function openOverlay(postData, initialEmail) {
             
             log('Sending request to /apply (generate)');
             
-            const response = await fetch(`${API_BASE_URL}/apply`, {
+            const response = await fetch(`${API_BASE_URL}/api/apply`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -541,6 +541,8 @@ async function openOverlay(postData, initialEmail) {
                 },
                 body: JSON.stringify(requestBody)
             });
+            // console.log(response.data);
+            
 
             if (response.status === 401) {
                 showNotification('Session expired. Please open the website, save your profile again, and then retry.', 'error');

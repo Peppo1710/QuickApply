@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'checkBackend') {
         // Check if backend is running
-        fetch('https://quickapply.pradyumn.co.in/api/status')
+        fetch('https://quickapply-4kue.onrender.com/api/status')
             .then(response => response.json())
             .then(data => sendResponse({ success: true, data }))
             .catch(error => sendResponse({ success: false, error: error.message }));
@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'getProfile') {
         // Fetch user profile
-        fetch('https://quickapply.pradyumn.co.in/api/profile')
+        fetch('https://quickapply-4kue.onrender.com/api/profile')
             .then(response => response.json())
             .then(data => sendResponse({ success: true, data }))
             .catch(error => sendResponse({ success: false, error: error.message }));
