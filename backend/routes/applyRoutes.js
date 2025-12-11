@@ -80,9 +80,11 @@ ${currentEmail}`;
 // POST /api/apply - Generate email OR send email based on emailBody parameter
 router.post('/', authMiddleware, async (req, res) => {
     try {
+        console.log("1")
         const { postText, detectedEmail, detectedRole, emailBody } = req.body;
         const userProfile = await getProfile(req.user);
 
+        console.log("1")
         // If emailBody is provided, send the email (convert markdown to HTML)
         if (emailBody && typeof emailBody === 'string' && emailBody.trim().length > 0) {
             const jobDetails = extractJobDetails(postText, detectedEmail, detectedRole);

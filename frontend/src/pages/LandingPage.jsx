@@ -50,19 +50,17 @@ const LandingPage = () => {
                                 className="px-8 py-3 bg-white text-black rounded font-medium hover:bg-gray-50 transition-colors"
                                 style={{ border: '2px solid #000' }}
                             >
-                                Demo and Extension 
+                                Demo and Extension
                             </a>
-                            
+
                         </>
                     ) : (
                         <>
                             <Link
-                                to="https://chrome.google.com/webstore"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                to="/profile"
                                 className="px-8 py-3 bg-black text-white rounded font-medium hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
                             >
-                                Go to Extension
+                                Go to Profile
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M6 12l4-4-4-4" />
                                 </svg>

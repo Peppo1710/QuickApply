@@ -2,7 +2,7 @@
 // - On the profile web app, it syncs the saved JWT token into chrome.storage for the extension.
 // - On LinkedIn, it injects Quick Apply controls.
 
-const API_BASE_URL = 'https://quickapply-4kue.onrender.com/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 const log = (...args) => console.log('[Quick Apply]', ...args);
 const warn = (...args) => console.warn('[Quick Apply]', ...args);
 const PROFILE_APP_ORIGINS = [
@@ -120,7 +120,7 @@ function bootstrapLinkedInQuickApply() {
         document.body.appendChild(overlayContainer);
 
         shadowRoot = overlayContainer.attachShadow({ mode: 'open' });
-        
+
         if (!shadowRoot) {
             warn('Failed to create shadow root');
             return;
@@ -288,7 +288,7 @@ function bootstrapLinkedInQuickApply() {
             try {
                 const token = await getAuthToken();
                 const emailBody = shadowRoot.getElementById('emailEditor').value.trim();
-                
+
                 if (!emailBody) {
                     alert('Email body cannot be empty');
                     setLoading(false);
@@ -309,6 +309,8 @@ function bootstrapLinkedInQuickApply() {
                         emailBody: emailBody
                     })
                 });
+
+                console.log(response.data);
 
                 if (response.status === 401) {
                     showNotification('Session expired. Please log in again.', 'error');
@@ -352,65 +354,65 @@ function bootstrapLinkedInQuickApply() {
         }
     }
 
-    
-async function openOverlay(postData, initialEmail) {
-    // Ensure overlay is created first
-    if (!overlayContainer || !shadowRoot) {
-        await createOverlay();
-    }
-    
-    // Add another safety check after createOverlay
-    if (!shadowRoot) {
-        warn('shadowRoot still not available after createOverlay, cannot open overlay');
-        return;
-    }
 
-    currentPostData = postData;
-
-    // Wait for elements to be available with exponential backoff
-    let wrapper = null;
-    let editor = null;
-    let retries = 0;
-    const maxRetries = 15;
-    
-    while (retries < maxRetries) {
-        wrapper = shadowRoot.querySelector('.overlay-container');
-        editor = shadowRoot.getElementById('emailEditor');
-        
-        if (wrapper && editor) {
-            break; // Both found, exit loop
+    async function openOverlay(postData, initialEmail) {
+        // Ensure overlay is created first
+        if (!overlayContainer || !shadowRoot) {
+            await createOverlay();
         }
-        
-        // Exponential backoff: 50ms, 100ms, 200ms, etc.
-        const delay = Math.min(50 * Math.pow(2, retries), 500);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        retries++;
-        
-        log(`Retry ${retries}/${maxRetries}: wrapper=${!!wrapper}, editor=${!!editor}`);
+
+        // Add another safety check after createOverlay
+        if (!shadowRoot) {
+            warn('shadowRoot still not available after createOverlay, cannot open overlay');
+            return;
+        }
+
+        currentPostData = postData;
+
+        // Wait for elements to be available with exponential backoff
+        let wrapper = null;
+        let editor = null;
+        let retries = 0;
+        const maxRetries = 15;
+
+        while (retries < maxRetries) {
+            wrapper = shadowRoot.querySelector('.overlay-container');
+            editor = shadowRoot.getElementById('emailEditor');
+
+            if (wrapper && editor) {
+                break; // Both found, exit loop
+            }
+
+            // Exponential backoff: 50ms, 100ms, 200ms, etc.
+            const delay = Math.min(50 * Math.pow(2, retries), 500);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            retries++;
+
+            log(`Retry ${retries}/${maxRetries}: wrapper=${!!wrapper}, editor=${!!editor}`);
+        }
+
+        if (!wrapper) {
+            warn('Overlay wrapper not found after retries');
+            showNotification('Failed to open editor. Please try again.', 'error');
+            return;
+        }
+
+        if (!editor) {
+            warn('Email editor element not found in shadow DOM after retries');
+            showNotification('Failed to open editor. Please try again.', 'error');
+            return;
+        }
+
+        // Now safe to set value
+        editor.value = initialEmail || 'Generating draft...';
+        overlayContainer.style.display = 'block';
+
+        // Trigger reflow
+        wrapper.offsetHeight;
+        wrapper.classList.add('visible');
+
+        log('Overlay opened successfully');
     }
-
-    if (!wrapper) {
-        warn('Overlay wrapper not found after retries');
-        showNotification('Failed to open editor. Please try again.', 'error');
-        return;
-    }
-
-    if (!editor) {
-        warn('Email editor element not found in shadow DOM after retries');
-        showNotification('Failed to open editor. Please try again.', 'error');
-        return;
-    }
-
-    // Now safe to set value
-    editor.value = initialEmail || 'Generating draft...';
-    overlayContainer.style.display = 'block';
-
-    // Trigger reflow
-    wrapper.offsetHeight;
-    wrapper.classList.add('visible');
-    
-    log('Overlay opened successfully');
-}
 
     // --- Core Logic ---
 
@@ -514,26 +516,27 @@ async function openOverlay(postData, initialEmail) {
 
             const token = await getAuthToken();
             log('Generating email draft...');
-            
+
             // Validate data before sending
             if (!postText || postText.trim().length === 0) {
                 throw new Error('Post text is empty. Cannot generate email.');
             }
-            
+
             if (!detectedEmail || detectedEmail.trim().length === 0) {
                 throw new Error('Email address is required.');
             }
-            
+
             // Call generate endpoint (does NOT send email)
             const requestBody = {
                 postText: postText.trim(),
                 detectedEmail: detectedEmail.trim(),
                 detectedRole: detectedRole ? detectedRole.trim() : null
             };
-            
+
             log('Sending request to /apply (generate)');
-            
-            const response = await fetch(`${API_BASE_URL}/api/apply`, {
+            console.log(API_BASE_URL);
+
+            const response = await fetch(`${API_BASE_URL}/apply`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -542,7 +545,7 @@ async function openOverlay(postData, initialEmail) {
                 body: JSON.stringify(requestBody)
             });
             // console.log(response.data);
-            
+
 
             if (response.status === 401) {
                 showNotification('Session expired. Please open the website, save your profile again, and then retry.', 'error');
@@ -570,7 +573,7 @@ async function openOverlay(postData, initialEmail) {
                 // If it's an object, try to extract bodyHtml
                 emailBody = emailBody.bodyHtml || emailBody.body || JSON.stringify(emailBody);
             }
-            
+
             if (!emailBody || typeof emailBody !== 'string') {
                 throw new Error('Invalid email format received from server');
             }

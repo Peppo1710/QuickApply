@@ -192,6 +192,7 @@ const Profile = () => {
             const res = await fetch(`${backendUrl}/api/profile/${endpoint}`, {
                 method: isUpdate ? 'PUT' : 'POST',
                 headers,
+                credentials: 'include',
                 body: JSON.stringify(payload)
             });
 

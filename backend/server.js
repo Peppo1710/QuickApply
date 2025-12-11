@@ -11,8 +11,23 @@ const profileRoutes = require('./routes/profileRoutes');
 const applyRoutes = require('./routes/applyRoutes');
 const authRoutes = require('./routes/authRoutes');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Security Middleware
+app.use(helmet());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
 
 /* -----------------------------------------------------
    ✅ FIXED FRONTEND URL (NO TRAILING SLASH EVER)
@@ -99,7 +114,7 @@ app.get("/oauth/callback",
                 hasGoogleAccessToken: !!req.user.googleAccessToken,
                 hasGoogleRefreshToken: !!req.user.googleRefreshToken
             } : "null");
-            
+
             const JWT_SECRET = process.env.JWT_SECRET;
             const oauthUser = req.user; // Google user info
 
@@ -122,7 +137,7 @@ app.get("/oauth/callback",
                 { expiresIn: "30d" }
             );
             console.log(token.email);
-            
+
 
             const redirectUrl = `${FRONTEND}/auth/callback?token=${token}`;
             console.log("🔵 [BACKEND] Session created and token generated successfully");
