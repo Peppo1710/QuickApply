@@ -5,11 +5,15 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const UserProfile = require('../models/UserProfile');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET ;
+const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const BACKEND_URL = process.env.BACKEND_URL ;
-const FRONTEND_URL = process.env.FRONTEND_URL ;
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+console.log('🔵 [BACKEND] OAuth Config:');
+console.log(`   - BACKEND_URL: ${BACKEND_URL}`);
+console.log(`   - Callback URL: ${BACKEND_URL}/oauth/callback`);
 
 // Configure Google OAuth Strategy
 if (CLIENT_ID && CLIENT_SECRET) {
@@ -18,23 +22,23 @@ if (CLIENT_ID && CLIENT_SECRET) {
         clientSecret: CLIENT_SECRET,
         callbackURL: `${BACKEND_URL}/oauth/callback`
     },
-    async (accessToken, refreshToken, profile, done) => {
-        try {
-            // Don't create UserProfile in DB during OAuth
-            // Just pass OAuth info to callback - profile will be created when user saves the form
-            const oauthUser = {
-                googleId: profile.id,
-                email: profile.emails[0].value.toLowerCase(),
-                fullName: profile.displayName || '',
-                googleAccessToken: accessToken,
-                googleRefreshToken: refreshToken
-            };
-            
-            return done(null, oauthUser);
-        } catch (error) {
-            return done(error, null);
-        }
-    }));
+        async (accessToken, refreshToken, profile, done) => {
+            try {
+                // Don't create UserProfile in DB during OAuth
+                // Just pass OAuth info to callback - profile will be created when user saves the form
+                const oauthUser = {
+                    googleId: profile.id,
+                    email: profile.emails[0].value.toLowerCase(),
+                    fullName: profile.displayName || '',
+                    googleAccessToken: accessToken,
+                    googleRefreshToken: refreshToken
+                };
+
+                return done(null, oauthUser);
+            } catch (error) {
+                return done(error, null);
+            }
+        }));
 } else {
     console.warn('[Quick Apply][Backend] Google OAuth credentials (CLIENT_ID, CLIENT_SECRET) not configured. OAuth will not work.');
 }
@@ -62,9 +66,9 @@ router.get('/google',
 router.get('/session', async (req, res) => {
     try {
         if (req.session && req.session.email) {
-            res.json({ 
-                authenticated: true, 
-                email: req.session.email 
+            res.json({
+                authenticated: true,
+                email: req.session.email
             });
         } else {
             res.json({ authenticated: false });
@@ -90,30 +94,30 @@ router.post('/logout', async (req, res) => {
 router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
-        
+
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ error: 'No token provided' });
         }
-        
+
         const token = authHeader.substring(7);
         const decoded = jwt.verify(token, JWT_SECRET);
-        
+
         if (!decoded.email) {
             return res.status(401).json({ error: 'Invalid token' });
         }
-        
+
         // Find user by email
         const user = await UserProfile.findOne({ email: decoded.email.toLowerCase() }).select('-password -googleAccessToken -googleRefreshToken');
-        
+
         if (!user) {
             // User is authenticated but hasn't saved profile yet
-            return res.json({ 
-                authenticated: true, 
+            return res.json({
+                authenticated: true,
                 hasProfile: false,
                 email: decoded.email
             });
         }
-        
+
         res.json({ user, authenticated: true, hasProfile: true });
     } catch (error) {
         console.error('🔴 [BACKEND] Error in /me endpoint:', error);

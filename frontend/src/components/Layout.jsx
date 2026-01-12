@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
                         </button>
                         <h3 className="text-xl font-bold mb-4">Developer Info</h3>
                         <p className="text-gray-800 text-lg leading-relaxed">
-                            Hii myself pradyumn shirsath developer of this project . minimal .
+                            Hii myself Pradyumn Shirsath developer of this project .
                         </p>
                     </div>
                 </div>

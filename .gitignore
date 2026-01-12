@@ -37,3 +37,5 @@ extension.zip
 user_profile.json
 
 test/
+
+.env*

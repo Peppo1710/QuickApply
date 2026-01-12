@@ -87,7 +87,7 @@ const LandingPage = () => {
                             </svg>
                         }
                         title="AI-Powered Emails"
-                        description="Generate personalized application emails using Google Gemini AI. Each email is tailored to the job description and your profile."
+                        description="Generate personalized application emails using AI. Each email is tailored to the job description and your profile."
                     />
                     <FeatureCard
                         icon={
