@@ -1,5 +1,4 @@
-// Background service worker for the extension
-// Handles background tasks and message passing
+importScripts('config.js');
 
 chrome.runtime.onInstalled.addListener(() => {
     console.log('LinkedIn Quick Apply extension installed');
@@ -9,7 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'checkBackend') {
         // Check if backend is running
-        fetch('https://quickapply-4kue.onrender.com/api/status')
+        fetch(`${CONFIG.API_BASE_URL}/api/status`)
             .then(response => response.json())
             .then(data => sendResponse({ success: true, data }))
             .catch(error => sendResponse({ success: false, error: error.message }));
@@ -19,7 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'getProfile') {
         // Fetch user profile
-        fetch('https://quickapply-4kue.onrender.com/api/profile')
+        fetch(`${CONFIG.API_BASE_URL}/api/profile`)
             .then(response => response.json())
             .then(data => sendResponse({ success: true, data }))
             .catch(error => sendResponse({ success: false, error: error.message }));

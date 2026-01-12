@@ -23,7 +23,7 @@ const Demo = () => {
 				>
 					<iframe
 						className="w-full h-full"
-						src="https://www.youtube.com/embed/ldhkWV5QiP4"
+						src="./video.mp4"
 						title="Demo Video"
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 						allowFullScreen

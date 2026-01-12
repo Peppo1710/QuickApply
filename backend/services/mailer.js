@@ -14,7 +14,7 @@ const sendApplicationEmail = async ({ to, subject, bodyHtml, userProfile }) => {
     try {
         // Get user's Google OAuth tokens
         const user = await UserProfile.findById(userProfile._id || userProfile.id);
-        
+
         if (!user || !user.googleAccessToken) {
             throw new Error('User not authenticated with Google. Please log in with Google to send emails.');
         }
@@ -51,12 +51,12 @@ const sendApplicationEmail = async ({ to, subject, bodyHtml, userProfile }) => {
             } else {
                 currentAccessToken = tokenResponse;
             }
-            
+
             // Ensure we have a valid string token
             if (!currentAccessToken || typeof currentAccessToken !== 'string') {
                 throw new Error('Invalid access token format received from OAuth client');
             }
-            
+
             // If token was refreshed, update it in the database
             if (currentAccessToken && currentAccessToken !== user.googleAccessToken) {
                 user.googleAccessToken = currentAccessToken;
@@ -68,25 +68,38 @@ const sendApplicationEmail = async ({ to, subject, bodyHtml, userProfile }) => {
                 });
             }
         } catch (tokenError) {
-            console.error('Error getting access token:', tokenError);
+            console.error('🔴 [MAILER] Error getting access token:', tokenError.message);
+            console.log('🔵 [MAILER] Checking for refresh token...');
+            console.log(`🔵 [MAILER] Has refresh token: ${!!user.googleRefreshToken}`);
+
             if (!user.googleRefreshToken) {
-                throw new Error('Google OAuth token expired and no refresh token available. Please log in again with Google.');
+                console.error('🔴 [MAILER] No refresh token available!');
+                throw new Error('Google OAuth token expired and no refresh token available. Please logout and login again with Google to grant permissions.');
             }
+
             // If getAccessToken failed, try explicit refresh
+            console.log('🔵 [MAILER] Attempting to refresh access token...');
             try {
                 const { credentials } = await oauth2Client.refreshAccessToken();
+                console.log('✅ [MAILER] Token refresh successful!');
+                console.log(`🔵 [MAILER] New access token received: ${!!credentials.access_token}`);
+                console.log(`🔵 [MAILER] New refresh token received: ${!!credentials.refresh_token}`);
+
                 user.googleAccessToken = credentials.access_token;
                 if (credentials.refresh_token) {
                     user.googleRefreshToken = credentials.refresh_token;
                 }
                 await user.save();
+                console.log('✅ [MAILER] Updated tokens saved to database');
+
                 oauth2Client.setCredentials({
                     access_token: credentials.access_token,
                     refresh_token: credentials.refresh_token || user.googleRefreshToken
                 });
             } catch (refreshError) {
-                console.error('Token refresh failed:', refreshError);
-                throw new Error('Google OAuth token expired. Please log in again with Google.');
+                console.error('🔴 [MAILER] Token refresh failed:', refreshError.message);
+                console.error('🔴 [MAILER] Full error:', refreshError);
+                throw new Error('Google OAuth token expired and refresh failed. Please logout and login again with Google.');
             }
         }
 
@@ -99,7 +112,7 @@ const sendApplicationEmail = async ({ to, subject, bodyHtml, userProfile }) => {
         if (userProfile.portfolioUrl) links.push({ label: 'Portfolio', url: userProfile.portfolioUrl });
         if (userProfile.githubUrl) links.push({ label: 'GitHub', url: userProfile.githubUrl });
         if (userProfile.linkedinUrl) links.push({ label: 'LinkedIn', url: userProfile.linkedinUrl });
-        
+
         const linksHtml = links.length > 0 ? `
             <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid #000000;">
                 <p style="margin: 0 0 12px 0; font-weight: 700; font-size: 14px; color: #000000;">My Links:</p>
@@ -157,7 +170,7 @@ const sendApplicationEmail = async ({ to, subject, bodyHtml, userProfile }) => {
                         access_token: credentials.access_token,
                         refresh_token: credentials.refresh_token || user.googleRefreshToken
                     });
-                    
+
                     // Retry the API call with fresh token
                     await gmail.users.messages.send({
                         userId: 'me',

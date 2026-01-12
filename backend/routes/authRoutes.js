@@ -57,7 +57,9 @@ passport.deserializeUser(async (user, done) => {
 // Initiate Google OAuth
 router.get('/google',
     passport.authenticate('google', {
-        scope: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.send']
+        scope: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.send'],
+        accessType: 'offline',
+        prompt: 'consent'
     })
 );
 

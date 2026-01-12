@@ -37,6 +37,7 @@
                 "file:///*"
             ],
             "js": [
+                "config.js",
                 "content.js"
             ],
             "css": [
